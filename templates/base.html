@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dispatchly{% endblock %} · Dispatchly</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  {% if user %}
+  <header class="topbar">
+    <a class="brand" href="/">Dispatchly</a>
+    <nav>
+      {% if user.role == "rider" %}
+        <a href="/my-jobs">My jobs</a>
+      {% else %}
+        <a href="/">Board</a>
+        {% if user.role in ["dispatcher", "ops_lead"] %}<a href="/orders/new">New order</a>{% endif %}
+        <a href="/riders">Riders</a>
+        {% if user.role in ["accountant", "ops_lead"] %}<a href="/remittance">Remittance</a>{% endif %}
+        {% if user.role in ["dispatcher", "ops_lead"] %}<a href="/settings/tariff">Tariff</a>{% endif %}
+      {% endif %}
+    </nav>
+    <form method="post" action="/logout" class="signout">
+      <span class="who">{{ user.display_name }}</span>
+      <button type="submit" class="link">Sign out</button>
+    </form>
+  </header>
+  {% endif %}
+  <main class="page {% block page_class %}{% endblock %}">
+    {% if flash %}
+      <div class="flash flash-{{ flash.kind }}" role="status">{{ flash.message }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/js/app.js" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

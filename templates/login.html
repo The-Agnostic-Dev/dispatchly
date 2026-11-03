@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block page_class %}narrow{% endblock %}
+{% block content %}
+<div class="card login">
+  <h1>Dispatchly</h1>
+  <p class="muted">Sign in to the dispatch board.</p>
+  {% if error %}<div class="flash flash-error">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <label>Username <input name="username" value="{{ username }}" autocomplete="username" required autofocus></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit" class="primary">Sign in</button>
+  </form>
+</div>
+{% endblock %}

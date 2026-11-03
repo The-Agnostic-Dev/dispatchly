@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Riders{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Riders</h1>
+    <p class="muted">Click a column heading to sort. Cash on hand is cash-on-delivery money collected and not yet handed in to accounts.</p>
+  </div>
+</div>
+<table class="data" data-sortable>
+  <thead>
+    <tr>
+      <th data-sort>Rider</th>
+      <th data-sort>Phone</th>
+      <th data-sort>Bike</th>
+      <th data-sort class="num">Jobs now</th>
+      <th data-sort class="num">Delivered today</th>
+      <th data-sort class="num">Cash on hand</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in fleet %}
+    <tr data-rider-id="{{ r.id }}" data-active-jobs="{{ r.active_jobs }}" data-capacity="{{ r.capacity }}" class="{% if not r.active %}inactive{% endif %}">
+      <td><a href="/riders/{{ r.id }}">{{ r.name }}</a>{% if not r.active %} <span class="badge">Off shift</span>{% endif %}</td>
+      <td>{{ r.phone }}</td>
+      <td>{{ r.bike_plate }}</td>
+      <td class="num" data-value="{{ r.active_jobs }}">{{ r.active_jobs }} / {{ r.capacity }}</td>
+      <td class="num" data-value="{{ r.delivered_today }}">{{ r.delivered_today }}</td>
+      <td class="num cash" data-value="{{ r.cash_on_hand_kobo }}">{{ r.cash_on_hand_kobo|naira }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
+{% block scripts %}<script src="/static/js/sortable-table.js" defer></script>{% endblock %}

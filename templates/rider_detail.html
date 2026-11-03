@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "partials/order_card.html" import order_card %}
+{% block title %}{{ rider.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ rider.name }}{% if not rider.active %} <span class="badge">Off shift</span>{% endif %}</h1>
+    <p class="muted">{{ rider.phone }} &middot; {{ rider.bike_plate }} &middot; up to {{ rider.capacity }} jobs at a time</p>
+  </div>
+  <div class="stat"><span class="muted">Cash on hand</span> <strong>{{ cash_on_hand|naira }}</strong></div>
+</div>
+<div class="grid-2">
+  <section>
+    <h2>Current jobs ({{ current|length }})</h2>
+    <ul class="cards">{% for o in current %}{{ order_card(o) }}{% else %}<li class="empty">No jobs right now.</li>{% endfor %}</ul>
+  </section>
+  <section>
+    <h2>Recently finished</h2>
+    <ul class="cards">{% for o in recent %}{{ order_card(o) }}{% else %}<li class="empty">Nothing yet.</li>{% endfor %}</ul>
+  </section>
+</div>
+{% endblock %}

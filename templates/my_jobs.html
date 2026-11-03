@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "partials/status.html" import badge %}
+{% block title %}My jobs{% endblock %}
+{% block body_class %}rider-view{% endblock %}
+{% block content %}
+<h1>{{ rider.name }}</h1>
+<p class="muted">Cash on hand: <strong>{{ cash_on_hand|naira }}</strong>. Hand it in to accounts at the end of your shift.</p>
+
+<h2>Current jobs ({{ current|length }})</h2>
+<ul class="jobs">
+  {% for o in current %}
+  <li class="job card" data-order-id="{{ o.id }}">
+    <div class="order-card__head"><strong>{{ o.reference }}</strong> {{ badge(o.status) }}</div>
+    <p><strong>Pick up:</strong> {{ o.merchant_name }}, {{ o.pickup_address }}, {{ o.pickup_area }} &middot; <a href="tel:{{ o.merchant_phone }}">Call merchant</a></p>
+    <p><strong>Drop off:</strong> {{ o.customer_name }}, {{ o.dropoff_address }}, {{ o.dropoff_area }} &middot; <a href="tel:{{ o.customer_phone }}">Call customer</a></p>
+    {% if o.notes %}<p class="note">{{ o.notes }}</p>{% endif %}
+    <p>{% if o.cod_kobo > 0 %}Collect <strong>{{ o.cod_kobo|naira }}</strong>{% else %}Prepaid, collect nothing{% endif %}</p>
+    <div class="job-actions">
+      {% if o.status == "assigned" %}
+      <form method="post" action="/orders/{{ o.id }}/status">
+        <input type="hidden" name="action" value="picked_up"><input type="hidden" name="back" value="/my-jobs">
+        <button type="submit">Picked up</button>
+      </form>
+      {% endif %}
+      <form method="post" action="/orders/{{ o.id }}/status" class="deliver">
+        <input type="hidden" name="action" value="delivered"><input type="hidden" name="back" value="/my-jobs">
+        {% if o.cod_kobo > 0 %}<label>Cash collected <input name="cash" value="{{ o.cod_kobo|plain_naira }}" inputmode="decimal"></label>{% endif %}
+        <button type="submit" class="primary">Delivered</button>
+      </form>
+      <form method="post" action="/orders/{{ o.id }}/status">
+        <input type="hidden" name="action" value="failed"><input type="hidden" name="back" value="/my-jobs">
+        <button type="submit" class="danger">Could not deliver</button>
+      </form>
+    </div>
+  </li>
+  {% else %}
+  <li class="empty">No jobs right now. Dispatch will text you.</li>
+  {% endfor %}
+</ul>
+
+<h2>Recently finished</h2>
+<ul class="jobs compact">
+  {% for o in recent %}
+  <li>{{ o.reference }} {{ badge(o.status) }} {{ o.dropoff_area }}{% if o.delivered_at %} &middot; {{ o.delivered_at|datetime }}{% endif %}{% if o.cash_collected_kobo %} &middot; {{ o.cash_collected_kobo|naira }}{% endif %}</li>
+  {% else %}
+  <li class="empty">Nothing yet.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

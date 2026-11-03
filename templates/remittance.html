@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Remittance{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>End-of-day remittance</h1>
+    <p class="muted">{{ day_label }}</p>
+  </div>
+  <form method="get" action="/remittance" class="day-picker">
+    <a href="/remittance?date={{ prev_day }}">&larr; Previous day</a>
+    <input type="date" name="date" value="{{ day }}" aria-label="Day">
+    <button type="submit">Show</button>
+    {% if not is_today %}<a href="/remittance?date={{ next_day }}">Next day &rarr;</a>{% endif %}
+  </form>
+</div>
+<p class="hint">Expected cash is the cash collected on cash-on-delivery orders that the rider delivered that day (Lagos time).
+  Delivery fees are invoiced to merchants every Friday and are not collected by riders, so they are not part of this sheet.</p>
+<table class="data">
+  <thead><tr><th>Rider</th><th class="num">Cash deliveries</th><th class="num">Expected</th><th class="num">Handed in</th><th class="num">Outstanding</th><th></th></tr></thead>
+  <tbody>
+    {% for row in rows %}
+    <tr data-rider-id="{{ row.rider_id }}" data-expected="{{ row.expected_kobo }}" data-received="{{ row.received_kobo }}">
+      <td>{{ row.rider_name }}</td>
+      <td class="num">{{ row.cash_deliveries }}</td>
+      <td class="num">{{ row.expected_kobo|naira }}</td>
+      <td class="num">{{ row.received_kobo|naira }}</td>
+      <td class="num {% if row.outstanding_kobo > 0 %}owing{% endif %}">{{ row.outstanding_kobo|naira }}</td>
+      <td><a href="/remittance/{{ row.rider_id }}?date={{ day }}">Details</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">No cash deliveries on this day.</td></tr>
+    {% endfor %}
+  </tbody>
+  <tfoot><tr><th>Total</th><th></th><th class="num">{{ expected_kobo|naira }}</th><th class="num">{{ received_kobo|naira }}</th><th class="num">{{ (expected_kobo - received_kobo)|naira }}</th><th></th></tr></tfoot>
+</table>
+{% endblock %}

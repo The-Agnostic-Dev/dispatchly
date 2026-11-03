@@ -1,0 +1,8 @@
+services:
+  dispatchly:
+    build: .
+    image: dispatchly:dev
+    ports:
+      - "5115:5115"
+    environment:
+      RUST_LOG: info,dispatchly=info

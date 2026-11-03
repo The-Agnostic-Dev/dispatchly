@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{% if order_id %}Edit order{% else %}New order{% endif %}{% endblock %}
+{% block page_class %}medium{% endblock %}
+{% block content %}
+{% set phone_pattern = "(\\+234|0)[789]0[0-9]{8}" %}
+<h1>{% if order_id %}Edit order{% else %}New delivery order{% endif %}</h1>
+
+{% if errors %}
+<div class="flash flash-error">
+  <p>Please fix the following:</p>
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" action="{% if order_id %}/orders/{{ order_id }}/edit{% else %}/orders{% endif %}" class="order-form" data-quote-url="/api/quote">
+  <fieldset>
+    <legend>Pickup (merchant)</legend>
+    <label>Merchant name <input name="merchant_name" value="{{ form.merchant_name }}" required></label>
+    <label>Merchant phone
+      <input name="merchant_phone" value="{{ form.merchant_phone }}" inputmode="tel" pattern="{{ phone_pattern }}" placeholder="08031234567" required>
+    </label>
+    <label>Pickup area
+      <select name="pickup_area_id" required>
+        <option value="">Choose area</option>
+        {% for area in areas %}<option value="{{ area.id }}" {% if form.pickup_area_id == area.id|string %}selected{% endif %}>{{ area.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Pickup address <input name="pickup_address" value="{{ form.pickup_address }}" required></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Drop-off (customer)</legend>
+    <label>Customer name <input name="customer_name" value="{{ form.customer_name }}" required></label>
+    <label>Customer phone
+      <input name="customer_phone" value="{{ form.customer_phone }}" inputmode="tel" pattern="{{ phone_pattern }}" placeholder="08031234567" required>
+    </label>
+    <label>Drop-off area
+      <select name="dropoff_area_id" required>
+        <option value="">Choose area</option>
+        {% for area in areas %}<option value="{{ area.id }}" {% if form.dropoff_area_id == area.id|string %}selected{% endif %}>{{ area.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Drop-off address <input name="dropoff_address" value="{{ form.dropoff_address }}" required></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Trip and payment</legend>
+    <label>Distance (km, from the map) <input name="distance_km" value="{{ form.distance_km }}" inputmode="decimal" required></label>
+    <label>Cash to collect on delivery (₦) <input name="cod" value="{{ form.cod }}" inputmode="decimal" placeholder="Leave empty if prepaid"></label>
+    <label class="check"><input type="checkbox" name="express" {% if form.express %}checked{% endif %}> Express (within 2 hours)</label>
+    <label>Notes for the rider <textarea name="notes" rows="2">{{ form.notes }}</textarea></label>
+  </fieldset>
+
+  <div class="quote">
+    <button type="button" id="checkFee">Check fee</button>
+    <output id="fee-estimate" class="muted">Press Check fee to see the delivery fee.</output>
+  </div>
+
+  <div class="actions">
+    <button type="submit" class="primary">{% if order_id %}Save changes{% else %}Create order{% endif %}</button>
+    <a href="{% if order_id %}/orders/{{ order_id }}{% else %}/{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="/static/js/order-form.js" defer></script>{% endblock %}

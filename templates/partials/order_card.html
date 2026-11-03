@@ -1,0 +1,18 @@
+{% from "partials/status.html" import badge %}
+{% macro order_card(order) %}
+<li class="order-card" data-order-id="{{ order.id }}" data-created="{{ order.created_at }}">
+  <div class="order-card__head">
+    <a href="/orders/{{ order.id }}" class="ref">{{ order.reference }}</a>
+    {{ badge(order.status) }}
+    {% if order.express %}<span class="badge badge-express">Express</span>{% endif %}
+  </div>
+  <div class="order-card__route">{{ order.pickup_area }} &rarr; {{ order.dropoff_area }} <span class="muted">({{ order.distance_km|km }})</span></div>
+  <div class="order-card__who">{{ order.customer_name }} <span class="muted">for {{ order.merchant_name }}</span></div>
+  <div class="order-card__meta">
+    {% if order.cod_kobo > 0 %}<span>Collect {{ order.cod_kobo|naira }}</span>{% else %}<span class="muted">Prepaid</span>{% endif %}
+    {% if order.rider_name %}<span>&middot; {{ order.rider_name }}</span>{% endif %}
+    <span class="muted">&middot; in {{ order.created_at|time }}</span>
+    {% if order.delivered_at %}<span class="muted">&middot; dropped {{ order.delivered_at|time }}</span>{% endif %}
+  </div>
+</li>
+{% endmacro %}

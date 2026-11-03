@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% from "partials/status.html" import badge %}
+{% block title %}{{ order.reference }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ order.reference }} {{ badge(order.status) }} {% if order.express %}<span class="badge badge-express">Express</span>{% endif %}</h1>
+    <p class="muted">Received {{ order.created_at|datetime }}</p>
+  </div>
+  {% if user.role in ["dispatcher", "ops_lead"] and order.status in ["pending", "assigned"] %}
+  <div class="head-actions">
+    <a class="button" href="/orders/{{ order.id }}/edit">Edit details</a>
+    <form method="post" action="/orders/{{ order.id }}/status" onsubmit="return confirm('Cancel {{ order.reference }}?')">
+      <input type="hidden" name="action" value="cancel">
+      <button type="submit" class="danger">Cancel order</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  <section class="card" data-testid="pickup">
+    <h2>Pickup</h2>
+    <p><strong>{{ order.merchant_name }}</strong></p>
+    <p><a href="tel:{{ order.merchant_phone }}">{{ order.merchant_phone }}</a></p>
+    <p>{{ order.pickup_address }}, {{ order.pickup_area }}</p>
+  </section>
+  <section class="card" data-testid="customer">
+    <h2>Customer</h2>
+    <p><strong>{{ order.customer_name }}</strong></p>
+    <p><a href="tel:{{ order.merchant_phone }}">{{ order.merchant_phone }}</a></p>
+    <p>{{ order.dropoff_address }}, {{ order.dropoff_area }}</p>
+    {% if order.notes %}<p class="note">{{ order.notes }}</p>{% endif %}
+  </section>
+
+  <section class="card" data-testid="fee">
+    <h2>Delivery fee</h2>
+    <table class="lines">
+      <tr><td>{{ order.dropoff_area }} zone fee</td><td class="num">{{ order.zone_fee_kobo|naira }}</td></tr>
+      <tr><td>Distance ({{ order.distance_km|km }})</td><td class="num">{{ order.band_fee_kobo|naira }}</td></tr>
+      {% if order.bridge_fee_kobo %}<tr><td>Bridge crossing (Mainland and Island)</td><td class="num">{{ order.bridge_fee_kobo|naira }}</td></tr>{% endif %}
+      {% if order.express_fee_kobo %}<tr><td>Express</td><td class="num">{{ order.express_fee_kobo|naira }}</td></tr>{% endif %}
+      <tr class="total"><td>Total (invoiced to merchant)</td><td class="num" data-fee-total="{{ order.fee_kobo }}">{{ order.fee_kobo|naira }}</td></tr>
+    </table>
+    <p class="muted">
+      {% if order.cod_kobo > 0 %}Rider collects <strong>{{ order.cod_kobo|naira }}</strong> from the customer.{% else %}Prepaid: rider collects nothing.{% endif %}
+    </p>
+  </section>
+
+  <section class="card" data-testid="rider">
+    <h2>Rider</h2>
+    {% if order.rider_name %}
+      <p><strong>{{ order.rider_name }}</strong> &middot; <a href="tel:{{ order.rider_phone }}">{{ order.rider_phone }}</a></p>
+    {% endif %}
+    {% if order.status == "pending" and user.role in ["dispatcher", "ops_lead"] %}
+      <form method="post" action="/orders/{{ order.id }}/assign" class="inline">
+        <select name="rider_id" required aria-label="Rider">
+          <option value="">Choose a rider</option>
+          {% for r in fleet %}
+            <option value="{{ r.id }}">{{ r.name }} ({{ r.active_jobs }}/{{ r.capacity }} jobs)</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="primary">Assign</button>
+      </form>
+    {% elif not order.rider_name %}
+      <p class="muted">No rider.</p>
+    {% endif %}
+    {% if user.role in ["dispatcher", "ops_lead"] and order.status in ["assigned", "picked_up"] %}
+      <div class="status-actions">
+        {% if order.status == "assigned" %}
+        <form method="post" action="/orders/{{ order.id }}/status"><input type="hidden" name="action" value="picked_up"><button type="submit">Mark picked up</button></form>
+        {% else %}
+        <form method="post" action="/orders/{{ order.id }}/status"><input type="hidden" name="action" value="delivered"><button type="submit" class="primary">Mark delivered</button></form>
+        {% endif %}
+        <form method="post" action="/orders/{{ order.id }}/status"><input type="hidden" name="action" value="failed"><button type="submit" class="danger">Failed delivery</button></form>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Timeline</h2>
+  <ol class="timeline">
+    {% for e in timeline %}
+      <li><span class="when">{{ e.at|datetime }}</span> {{ badge(e.status) }} {{ e.note }} <span class="muted">by {{ e.actor }}</span></li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

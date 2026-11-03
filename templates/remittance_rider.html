@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ rider.name }} remittance{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ rider.name }}</h1>
+    <p class="muted">Remittance for {{ day_label }} &middot; <a href="/remittance?date={{ day }}">Back to the day sheet</a></p>
+  </div>
+</div>
+<div class="grid-3 stats">
+  <div class="stat"><span class="muted">Expected</span> <strong data-testid="expected">{{ expected_kobo|naira }}</strong></div>
+  <div class="stat"><span class="muted">Handed in</span> <strong>{{ received_kobo|naira }}</strong></div>
+  <div class="stat"><span class="muted">Outstanding</span> <strong>{{ outstanding_kobo|naira }}</strong></div>
+</div>
+
+<h2>Cash-on-delivery orders</h2>
+<table class="data">
+  <thead><tr><th>Order</th><th>Customer</th><th>Area</th><th>Delivered</th><th class="num">To collect</th><th class="num">Collected</th></tr></thead>
+  <tbody>
+    {% for l in lines %}
+    <tr data-order-id="{{ l.order_id }}" data-delivered-local="{{ l.delivered_local }}" data-collected="{{ l.collected_kobo }}">
+      <td><a href="/orders/{{ l.order_id }}">{{ l.reference }}</a></td>
+      <td>{{ l.customer_name }}</td>
+      <td>{{ l.dropoff_area }}</td>
+      <td>{{ l.delivered_at|datetime }}</td>
+      <td class="num">{{ l.cod_kobo|naira }}</td>
+      <td class="num">{{ l.collected_kobo|naira }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">No cash-on-delivery orders delivered by {{ rider.name }} on this day.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Handed in</h2>
+<ul class="plain">
+  {% for r in handed_in %}<li>{{ r.amount_kobo|naira }} received by {{ r.received_by }} at {{ r.at|time }}{% if r.note %} ({{ r.note }}){% endif %}</li>{% else %}<li class="empty">Nothing recorded yet.</li>{% endfor %}
+</ul>
+<form method="post" action="/remittance/{{ rider.id }}" class="inline card">
+  <input type="hidden" name="day" value="{{ day }}">
+  <label>Amount received (₦) <input name="amount" inputmode="decimal" required></label>
+  <label>Note <input name="note" placeholder="Optional"></label>
+  <button type="submit" class="primary">Record cash received</button>
+</form>
+{% endblock %}

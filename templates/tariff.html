@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Tariff{% endblock %}
+{% block page_class %}medium{% endblock %}
+{% block content %}
+<h1>Delivery tariff</h1>
+<p class="hint">Delivery fee = drop-off zone fee + distance band fee
+  + {{ bridge_fee_kobo|naira }} bridge crossing when pickup and drop-off are on different sides (Mainland and Island)
+  + {{ express_fee_kobo|naira }} for express. Changes apply to new orders only; orders already created keep their fee.</p>
+{% if not can_edit %}<p class="muted">Only the operations lead can change fees.</p>{% endif %}
+
+<form method="post" action="/settings/tariff/zones" class="card">
+  <h2>Zones</h2>
+  <table class="data">
+    <thead><tr><th>Zone</th><th>Side</th><th>Areas</th><th class="num">Zone fee (₦)</th></tr></thead>
+    <tbody>
+    {% for z in tariff.zones %}
+      <tr data-zone-id="{{ z.id }}">
+        <td>{{ z.code }}: {{ z.name }}</td>
+        <td>{{ z.side|title }}</td>
+        <td class="muted">{% for a in tariff.areas if a.zone_id == z.id %}{{ a.name }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td class="num"><input name="zone_{{ z.id }}" value="{{ z.base_fee_kobo|plain_naira }}" inputmode="decimal" {% if not can_edit %}disabled{% endif %}></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if can_edit %}<button type="submit" class="primary">Save zone fees</button>{% endif %}
+</form>
+
+<form method="post" action="/settings/tariff/bands" class="card">
+  <h2>Distance bands</h2>
+  <table class="data">
+    <thead><tr><th>Band</th><th class="num">Extra fee (₦)</th></tr></thead>
+    <tbody>
+    {% for b in tariff.bands %}
+      <tr data-band-id="{{ b.id }}" data-min-km="{{ b.min_km }}">
+        <td>{{ b.label }}</td>
+        <td class="num"><input name="band_{{ b.id }}" value="{{ b.fee_kobo|plain_naira }}" inputmode="decimal" {% if not can_edit %}disabled{% endif %}></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if can_edit %}<button type="submit" class="primary">Save band fees</button>{% endif %}
+</form>
+{% endblock %}
