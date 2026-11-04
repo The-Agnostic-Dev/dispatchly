@@ -1,0 +1,36 @@
+# Added by TAD (The Agnostic Dev). Checks TAD's pull requests before
+# TAD reviews them: build, lint and tests.
+# Runs only on TAD's branches (tad/...). Optional: add a repository secret
+# TAD_QA_ENV with the .env lines this app needs to build and start.
+name: TAD QA
+on:
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: tad-qa-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  qa:
+    name: TAD QA
+    if: startsWith(github.head_ref, 'tad/') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - uses: Swatinem/rust-cache@v2
+      - name: App settings
+        env:
+          TAD_QA_ENV: ${{ secrets.TAD_QA_ENV }}
+        run: if [ -n "$TAD_QA_ENV" ]; then printf '%s\n' "$TAD_QA_ENV" >> .env; fi
+      - name: Build
+        run: |
+          cargo build --all-targets --locked || cargo build --all-targets
+      - name: Lint (changed files, advisory)
+        continue-on-error: true
+        run: |
+          # tad: advisory lint
+          cargo clippy --all-targets -- -D warnings
+      - name: Test
+        run: |
+          cargo test --all-targets
