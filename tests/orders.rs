@@ -67,6 +67,36 @@ fn cancelled_orders_cannot_be_picked_up() {
 }
 
 #[test]
+fn order_detail_shows_customers_own_phone() {
+    let conn = common::seeded();
+    let id: i64 = conn
+        .query_row("SELECT id FROM orders WHERE customer_name = 'Adaeze Nwankwo'", [], |r| r.get(0))
+        .unwrap();
+    let order = orders::get(&conn, id).unwrap();
+    assert_eq!(order.reference, "DL-24002");
+    let user = dispatchly::auth::authenticate(&conn, "tolu", dispatchly::seed::DEMO_PASSWORD)
+        .unwrap()
+        .expect("seeded dispatcher");
+    let env = dispatchly::views::environment(std::path::Path::new("templates"));
+    let template = env.get_template("order_detail.html").unwrap();
+    let html = template
+        .render(minijinja::context! { order => &order, user => &user, flash => Option::<dispatchly::auth::Flash>::None })
+        .unwrap();
+    assert!(html.contains(&order.customer_phone));
+    let customer_card = html
+        .split("data-testid=\"customer\"")
+        .nth(1)
+        .expect("customer card")
+        .split("data-testid=")
+        .nth(1)
+        .map(|_| html.split("data-testid=\"customer\"").nth(1).unwrap())
+        .unwrap_or_default();
+    let customer_card = customer_card.split("data-testid=").next().unwrap_or(customer_card);
+    assert!(customer_card.contains(&order.customer_phone));
+    assert!(!customer_card.contains(&order.merchant_phone));
+}
+
+#[test]
 fn board_lists_each_column() {
     let conn = common::seeded();
     let b = board::load(&conn, clock::today(), "").unwrap();
