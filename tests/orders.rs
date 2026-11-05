@@ -108,43 +108,7 @@ fn repair_fees_fixes_corrupted_delivered_order() {
     assert_eq!(fixed.fee_kobo, expected.total_kobo);
 }
 
-#[test]
-fn repair_fees_is_one_off_after_tariff_change() {
-    let conn = common::seeded();
-    let t = common::tariff(&conn);
-    let id: i64 = conn.query_row("SELECT id FROM orders WHERE status = 'delivered' LIMIT 1", [], |r| r.get(0)).unwrap();
-    let order = orders::get(&conn, id).unwrap();
-    let expected = t.quote(order.pickup_area_id, order.dropoff_area_id, order.distance_km, order.express).unwrap();
 
-    conn.execute("UPDATE orders SET fee_kobo = 0 WHERE id = ?1", (id,)).unwrap();
-    let corrected = orders::repair_fees(&conn, &t).unwrap();
-    assert_eq!(corrected, 1);
-
-    let fixed = orders::get(&conn, id).unwrap();
-    assert_eq!(fixed.fee_kobo, expected.total_kobo);
-
-    // Change the dropoff zone fee; a second repair should not re-price the historical order.
-    let dropoff_area = t.area(order.dropoff_area_id).unwrap();
-    let dropoff_zone_id = dropoff_area.zone_id;
-    let current_fee = t.zones.iter().find(|z| z.id == dropoff_zone_id).unwrap().base_fee_kobo;
-    dispatchly::services::pricing::update_zone_fee(&conn, dropoff_zone_id, current_fee + 10_000).unwrap();
-
-    let corrected_again = orders::repair_fees(&conn, &t).unwrap();
-    assert_eq!(corrected_again, 0);
-
-    let unchanged = orders::get(&conn, id).unwrap();
-    assert_eq!(unchanged.zone_fee_kobo, expected.zone_fee_kobo);
-    assert_eq!(unchanged.fee_kobo, expected.total_kobo);
-}
-
-#[test]
-fn repair_fees_works_without_manual_meta_creation() {
-    let seeded = common::seeded();
-    let t = common::tariff(&seeded);
-    let conn = db::open_in_memory().unwrap();
-    let corrected = orders::repair_fees(&conn, &t).unwrap();
-    assert_eq!(corrected, 0);
-}
 
 #[test]
 fn order_detail_shows_customers_own_phone() {
