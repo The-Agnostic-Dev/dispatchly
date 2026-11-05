@@ -148,3 +148,16 @@ fn remittance_sheet_tracks_what_was_handed_in() {
     assert_eq!(row(&conn).outstanding_kobo, 0);
     assert_eq!(riders::cash_on_hand(&conn, musa).unwrap(), 0);
 }
+
+#[test]
+fn riders_list_is_sorted_by_cash_on_hand_desc() {
+    let conn = common::seeded();
+    let riders = riders::list(&conn).unwrap();
+    assert!(!riders.is_empty());
+    let mut prev = i64::MAX;
+    for r in &riders {
+        assert!(r.cash_on_hand_kobo <= prev, "riders not sorted descending: {} has {} after {}", r.name, r.cash_on_hand_kobo, prev);
+        prev = r.cash_on_hand_kobo;
+    }
+    assert_eq!(riders[0].name, "Emeka Obi");
+}
