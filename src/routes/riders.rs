@@ -6,7 +6,6 @@ use minijinja::context;
 
 use crate::{
     auth::{CurrentUser, Role},
-    clock,
     error::{AppError, AppResult},
     services::riders,
     state::AppState,
@@ -17,7 +16,7 @@ pub async fn index(State(state): State<AppState>, user: CurrentUser) -> AppResul
     user.require(user.role != Role::Rider)?;
     let fleet = {
         let conn = state.db();
-        riders::list(&conn, clock::today())?
+        riders::list_by_cash(&conn)?
     };
     Ok(views::render(&state, Some(&user), "riders.html", context! { fleet => fleet })?.into_response())
 }
