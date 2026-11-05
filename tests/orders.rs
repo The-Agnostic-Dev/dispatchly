@@ -132,6 +132,21 @@ async fn assigning_respects_rider_limit() {
 }
 
 #[test]
+fn riders_page_lists_fleet_by_cash_descending() {
+    let conn = common::seeded();
+    let fleet = riders::list_by_cash(&conn).unwrap();
+    assert!(!fleet.is_empty());
+    for pair in fleet.windows(2) {
+        assert!(pair[0].cash_on_hand_kobo >= pair[1].cash_on_hand_kobo, "riders must be sorted by cash descending");
+    }
+    let emeka = common::rider_id(&conn, "Emeka Obi");
+    assert_eq!(fleet[0].id, emeka);
+    assert_eq!(fleet[0].name, "Emeka Obi");
+    let max_cash = fleet.iter().map(|r| r.cash_on_hand_kobo).max().unwrap();
+    assert_eq!(fleet[0].cash_on_hand_kobo, max_cash);
+}
+
+#[test]
 fn remittance_sheet_tracks_what_was_handed_in() {
     let conn = common::seeded();
     let yesterday = clock::today() - chrono::Duration::days(1);
