@@ -11,9 +11,19 @@ document.querySelectorAll('table[data-sortable]').forEach((table) => {
       const body = table.tBodies[0];
       const rows = [...body.rows];
       rows.sort((a, b) => {
-        const x = a.cells[index].textContent.trim();
-        const y = b.cells[index].textContent.trim();
-        return dir === 'asc' ? x.localeCompare(y) : y.localeCompare(x);
+        const cellX = a.cells[index];
+        const cellY = b.cells[index];
+        const x = (cellX.dataset.value || cellX.textContent).trim();
+        const y = (cellY.dataset.value || cellY.textContent).trim();
+        const nx = Number(x);
+        const ny = Number(y);
+        let cmp;
+        if (x !== '' && y !== '' && !Number.isNaN(nx) && !Number.isNaN(ny)) {
+          cmp = nx - ny;
+        } else {
+          cmp = x.localeCompare(y);
+        }
+        return dir === 'asc' ? cmp : -cmp;
       });
       rows.forEach((row) => body.appendChild(row));
     });
