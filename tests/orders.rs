@@ -152,12 +152,12 @@ fn remittance_sheet_tracks_what_was_handed_in() {
 #[test]
 fn riders_list_is_sorted_by_cash_on_hand_desc() {
     let conn = common::seeded();
-    let riders = riders::list(&conn).unwrap();
+    let riders = riders::list(&conn, clock::today()).unwrap();
     assert!(!riders.is_empty());
     let mut prev = i64::MAX;
     for r in &riders {
-        assert!(r.cash_on_hand_kobo <= prev, "riders not sorted descending: {} has {} after {}", r.name, r.cash_on_hand_kobo, prev);
+        assert!(r.cash_on_hand_kobo <= prev, "riders not sorted descending: {} has {} after {}", r.rider.name, r.cash_on_hand_kobo, prev);
         prev = r.cash_on_hand_kobo;
     }
-    assert_eq!(riders[0].name, "Emeka Obi");
+    assert_eq!(riders[0].rider.name, "Emeka Obi");
 }

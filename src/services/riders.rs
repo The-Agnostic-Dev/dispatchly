@@ -70,7 +70,7 @@ pub fn list(conn: &Connection, today: NaiveDate) -> rusqlite::Result<Vec<RiderSu
         .query_map([], |r| r.get(0))?
         .collect::<Result<_, _>>()?;
     let (start, end) = clock::day_bounds(today);
-    riders
+    let mut summaries: Vec<RiderSummary> = riders
         .into_iter()
         .map(|id| {
             let rider = get(conn, id)?;
@@ -87,7 +87,9 @@ pub fn list(conn: &Connection, today: NaiveDate) -> rusqlite::Result<Vec<RiderSu
                 rider,
             })
         })
-        .collect()
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    summaries.sort_by_key(|r| std::cmp::Reverse(r.cash_on_hand_kobo));
+    Ok(summaries)
 }
 
 /// Current jobs first (oldest assignment first), then the last few finished ones.
