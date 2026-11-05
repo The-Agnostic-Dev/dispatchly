@@ -13,9 +13,19 @@ async fn main() {
 
     let config = Config::from_env();
     let conn = db::open(&config.db_path).expect("could not open the database");
-    if config.reseed || seed::is_empty(&conn).expect("could not inspect the database") {
+    let seeded = if config.reseed || seed::is_empty(&conn).expect("could not inspect the database") {
         seed::run(&conn).expect("could not seed demo data");
         tracing::info!("seeded demo data into {}", config.db_path);
+        true
+    } else {
+        false
+    };
+
+    if !seeded {
+        let tariff = dispatchly::services::pricing::Tariff::load(&conn).expect("could not load tariff");
+        let corrected = dispatchly::services::orders::repair_edited_fees(&conn, &tariff)
+            .expect("could not repair edited fees");
+        tracing::info!("corrected delivery fees on {corrected} edited orders");
     }
 
     let state = AppState::new(conn, &config);

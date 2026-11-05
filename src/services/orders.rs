@@ -202,7 +202,7 @@ pub fn reference_for(id: i64) -> String {
     format!("DL-{}", 24_000 + id)
 }
 
-pub fn update(conn: &Connection, id: i64, input: &OrderInput, actor: &str) -> AppResult<()> {
+pub fn update(conn: &Connection, tariff: &Tariff, id: i64, input: &OrderInput, actor: &str) -> AppResult<()> {
     let order = get(conn, id)?;
     if !order.is_editable() {
         return Err(AppError::BadRequest(format!(
@@ -211,19 +211,73 @@ pub fn update(conn: &Connection, id: i64, input: &OrderInput, actor: &str) -> Ap
             crate::views::status_label(order.status)
         )));
     }
+    let quote = tariff
+        .quote(input.pickup_area_id, input.dropoff_area_id, input.distance_km, input.express)
+        .map_err(|e| AppError::BadRequest(e.to_string()))?;
     conn.execute(
         "UPDATE orders SET merchant_name = ?1, merchant_phone = ?2, pickup_area_id = ?3, pickup_address = ?4,
             customer_name = ?5, customer_phone = ?6, dropoff_area_id = ?7, dropoff_address = ?8,
-            distance_km = ?9, express = ?10, cod_kobo = ?11, notes = ?12
-         WHERE id = ?13",
+            distance_km = ?9, express = ?10, cod_kobo = ?11, notes = ?12,
+            zone_fee_kobo = ?13, band_fee_kobo = ?14, bridge_fee_kobo = ?15, express_fee_kobo = ?16, fee_kobo = ?17
+         WHERE id = ?18",
         params![
             input.merchant_name, input.merchant_phone, input.pickup_area_id, input.pickup_address,
             input.customer_name, input.customer_phone, input.dropoff_area_id, input.dropoff_address,
-            input.distance_km, input.express, input.cod_kobo, input.notes, id
+            input.distance_km, input.express, input.cod_kobo, input.notes,
+            quote.zone_fee_kobo, quote.band_fee_kobo, quote.bridge_fee_kobo, quote.express_fee_kobo, quote.total_kobo,
+            id
         ],
     )?;
     log_event(conn, id, &order.status, "Order details edited", actor)?;
     Ok(())
+}
+
+pub fn repair_edited_fees(conn: &Connection, tariff: &Tariff) -> AppResult<usize> {
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT order_id FROM order_events WHERE note = 'Order details edited'",
+    )?;
+    let ids = stmt
+        .query_map([], |r| r.get::<_, i64>(0))?
+        .collect::<rusqlite::Result<Vec<i64>>>()?;
+    let mut corrected = 0;
+    for id in ids {
+        let row = conn.query_row(
+            "SELECT pickup_area_id, dropoff_area_id, distance_km, express, zone_fee_kobo, band_fee_kobo, bridge_fee_kobo, express_fee_kobo, fee_kobo, status FROM orders WHERE id = ?1",
+            [id],
+            |r| {
+                Ok((
+                    r.get::<_, i64>(0)?,
+                    r.get::<_, i64>(1)?,
+                    r.get::<_, f64>(2)?,
+                    r.get::<_, bool>(3)?,
+                    r.get::<_, i64>(4)?,
+                    r.get::<_, i64>(5)?,
+                    r.get::<_, i64>(6)?,
+                    r.get::<_, i64>(7)?,
+                    r.get::<_, i64>(8)?,
+                    r.get::<_, String>(9)?,
+                ))
+            },
+        )?;
+        let (pickup, dropoff, distance, express, zone, band, bridge, express_fee, fee, status) = row;
+        let quote = tariff
+            .quote(pickup, dropoff, distance, express)
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        if quote.zone_fee_kobo != zone
+            || quote.band_fee_kobo != band
+            || quote.bridge_fee_kobo != bridge
+            || quote.express_fee_kobo != express_fee
+            || quote.total_kobo != fee
+        {
+            conn.execute(
+                "UPDATE orders SET zone_fee_kobo = ?1, band_fee_kobo = ?2, bridge_fee_kobo = ?3, express_fee_kobo = ?4, fee_kobo = ?5 WHERE id = ?6",
+                params![quote.zone_fee_kobo, quote.band_fee_kobo, quote.bridge_fee_kobo, quote.express_fee_kobo, quote.total_kobo, id],
+            )?;
+            log_event(conn, id, &status, "Delivery fee corrected", "System")?;
+            corrected += 1;
+        }
+    }
+    Ok(corrected)
 }
 
 /// Moves an order along its lifecycle. Returns false when the order is not in a state

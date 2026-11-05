@@ -90,7 +90,7 @@ pub async fn update(
         let conn = state.db();
         let tariff = state.tariff.get(&conn)?;
         match form.validate(&tariff) {
-            Ok(input) => Ok(orders::update(&conn, id, &input, &user.display_name)?),
+            Ok(input) => Ok(orders::update(&conn, &tariff, id, &input, &user.display_name)?),
             Err(errors) => Err(errors),
         }
     };
