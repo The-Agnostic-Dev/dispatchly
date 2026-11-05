@@ -74,7 +74,7 @@ fn order_detail_shows_customers_own_phone() {
         .unwrap();
     let order = orders::get(&conn, id).unwrap();
     assert_eq!(order.reference, "DL-24002");
-    let env = dispatchly::views::environment();
+    let env = dispatchly::views::environment(std::path::Path::new("templates"));
     let template = env.get_template("order_detail.html").unwrap();
     let html = template
         .render(minijinja::context! { order => &order })
