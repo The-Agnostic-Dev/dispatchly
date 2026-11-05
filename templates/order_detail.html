@@ -28,7 +28,7 @@
   <section class="card" data-testid="customer">
     <h2>Customer</h2>
     <p><strong>{{ order.customer_name }}</strong></p>
-    <p><a href="tel:{{ order.merchant_phone }}">{{ order.merchant_phone }}</a></p>
+    <p><a href="tel:{{ order.customer_phone }}">{{ order.customer_phone }}</a></p>
     <p>{{ order.dropoff_address }}, {{ order.dropoff_area }}</p>
     {% if order.notes %}<p class="note">{{ order.notes }}</p>{% endif %}
   </section>
