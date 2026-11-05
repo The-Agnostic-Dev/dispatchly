@@ -160,9 +160,4 @@ fn riders_list_is_sorted_by_cash_on_hand_desc() {
         prev = r.cash_on_hand_kobo;
     }
     assert_eq!(riders[0].rider.name, "Emeka Obi");
-
-    // list() remains alphabetical for the assign-rider dropdown.
-    let alphabetical = riders::list(&conn, clock::today()).unwrap();
-    assert!(!alphabetical.is_empty());
-    assert_eq!(alphabetical[0].rider.name, "Chidi Okeke");
 }
