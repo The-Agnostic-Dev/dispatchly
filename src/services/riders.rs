@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+
 use chrono::NaiveDate;
 use rusqlite::{Connection, params};
 use serde::Serialize;
@@ -88,6 +90,13 @@ pub fn list(conn: &Connection, today: NaiveDate) -> rusqlite::Result<Vec<RiderSu
             })
         })
         .collect()
+}
+
+/// The riders page: who is holding the most cash, first.
+pub fn list_by_cash(conn: &Connection) -> rusqlite::Result<Vec<RiderSummary>> {
+    let mut fleet = list(conn, clock::today())?;
+    fleet.sort_by_cached_key(|r| Reverse(r.cash_on_hand_kobo));
+    Ok(fleet)
 }
 
 /// Current jobs first (oldest assignment first), then the last few finished ones.
