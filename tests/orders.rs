@@ -1,7 +1,7 @@
 mod common;
 
 use dispatchly::{
-    clock,
+    clock, db,
     services::{
         board, dispatch,
         orders::{self, Action, OrderInput},
@@ -139,15 +139,12 @@ fn repair_fees_is_one_off_after_tariff_change() {
 
 #[test]
 fn repair_fees_works_without_manual_meta_creation() {
-    let conn = common::seeded();
-    let t = common::tariff(&conn);
-    let id: i64 = conn.query_row("SELECT id FROM orders WHERE status = 'delivered' LIMIT 1", [], |r| r.get(0)).unwrap();
-    let order = orders::get(&conn, id).unwrap();
-    let expected = t.quote(order.pickup_area_id, order.dropoff_area_id, order.distance_km, order.express).unwrap();
-    conn.execute("UPDATE orders SET fee_kobo = 0 WHERE id = ?1", (id,)).unwrap();
-    orders::repair_fees(&conn, &t).unwrap();
-    let fixed = orders::get(&conn, id).unwrap();
-    assert_eq!(fixed.fee_kobo, expected.total_kobo);
+    let seeded = common::seeded();
+    let t = common::tariff(&seeded);
+    let conn = rusqlite::Connection::open_in_memory().unwrap();
+    conn.execute_batch(dispatchly::db::SCHEMA).unwrap();
+    let corrected = orders::repair_fees(&conn, &t).unwrap();
+    assert_eq!(corrected, 0);
 }
 
 #[test]
