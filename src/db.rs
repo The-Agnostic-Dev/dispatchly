@@ -89,6 +89,11 @@ CREATE TABLE IF NOT EXISTS remittances (
     note        TEXT NOT NULL DEFAULT '',
     at          TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 "#;
 
 pub fn open(path: &str) -> rusqlite::Result<Connection> {

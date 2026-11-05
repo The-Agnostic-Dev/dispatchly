@@ -141,8 +141,7 @@ fn repair_fees_is_one_off_after_tariff_change() {
 fn repair_fees_works_without_manual_meta_creation() {
     let seeded = common::seeded();
     let t = common::tariff(&seeded);
-    let conn = rusqlite::Connection::open_in_memory().unwrap();
-    conn.execute_batch(dispatchly::db::SCHEMA).unwrap();
+    let conn = db::open_in_memory().unwrap();
     let corrected = orders::repair_fees(&conn, &t).unwrap();
     assert_eq!(corrected, 0);
 }
