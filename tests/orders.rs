@@ -89,6 +89,60 @@ fn editing_order_recomputes_fees_from_pricing() {
 }
 
 #[test]
+fn repair_edited_fees_fixes_corrupted_delivered_order() {
+    let conn = common::seeded();
+    let t = common::tariff(&conn);
+    let id = orders::create(&conn, &t, &input(&t), "Tolulope Adebayo").unwrap();
+
+    let ajah = common::area(&t, "Ajah");
+    conn.execute(
+        "UPDATE orders SET dropoff_area_id = ?1, distance_km = ?2, express = ?3 WHERE id = ?4",
+        (ajah, 23.0, true, id),
+    )
+    .unwrap();
+    orders::log_event(&conn, id, "pending", "Order details edited", "Tolulope Adebayo").unwrap();
+    conn.execute(
+        "UPDATE orders SET status = 'delivered', delivered_at = ?1 WHERE id = ?2",
+        (clock::to_db(clock::now()), id),
+    )
+    .unwrap();
+
+    assert_eq!(orders::repair_edited_fees(&conn, &t).unwrap(), 1);
+
+    let order = orders::get(&conn, id).unwrap();
+    let expected = t
+        .quote(order.pickup_area_id, order.dropoff_area_id, order.distance_km, order.express)
+        .unwrap();
+    assert_eq!(order.zone_fee_kobo, expected.zone_fee_kobo);
+    assert_eq!(order.band_fee_kobo, expected.band_fee_kobo);
+    assert_eq!(order.bridge_fee_kobo, expected.bridge_fee_kobo);
+    assert_eq!(order.express_fee_kobo, expected.express_fee_kobo);
+    assert_eq!(order.fee_kobo, expected.total_kobo);
+}
+
+#[test]
+fn repair_edited_fees_does_not_touch_unedited_order_with_stale_fee() {
+    let conn = common::seeded();
+    let t = common::tariff(&conn);
+    let id = orders::create(&conn, &t, &input(&t), "Tolulope Adebayo").unwrap();
+
+    conn.execute(
+        "UPDATE orders SET zone_fee_kobo = 1, band_fee_kobo = 1, bridge_fee_kobo = 1, express_fee_kobo = 1, fee_kobo = 1 WHERE id = ?1",
+        [id],
+    )
+    .unwrap();
+
+    assert_eq!(orders::repair_edited_fees(&conn, &t).unwrap(), 0);
+
+    let order = orders::get(&conn, id).unwrap();
+    assert_eq!(order.zone_fee_kobo, 1);
+    assert_eq!(order.band_fee_kobo, 1);
+    assert_eq!(order.bridge_fee_kobo, 1);
+    assert_eq!(order.express_fee_kobo, 1);
+    assert_eq!(order.fee_kobo, 1);
+}
+
+#[test]
 fn order_detail_shows_customers_own_phone() {
     let conn = common::seeded();
     let id: i64 = conn
