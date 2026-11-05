@@ -67,6 +67,23 @@ fn cancelled_orders_cannot_be_picked_up() {
 }
 
 #[test]
+fn order_detail_shows_customers_own_phone() {
+    let conn = common::seeded();
+    let id: i64 = conn
+        .query_row("SELECT id FROM orders WHERE customer_name = 'Adaeze Nwankwo'", [], |r| r.get(0))
+        .unwrap();
+    let order = orders::get(&conn, id).unwrap();
+    assert_eq!(order.reference, "DL-24002");
+    let env = dispatchly::views::environment();
+    let template = env.get_template("order_detail.html").unwrap();
+    let html = template
+        .render(minijinja::context! { order => &order })
+        .unwrap();
+    assert!(html.contains(&order.customer_phone));
+    assert!(!html.contains(&order.merchant_phone));
+}
+
+#[test]
 fn board_lists_each_column() {
     let conn = common::seeded();
     let b = board::load(&conn, clock::today(), "").unwrap();
