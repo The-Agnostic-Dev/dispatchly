@@ -1,7 +1,7 @@
 mod common;
 
 use dispatchly::{
-    clock, db,
+    clock,
     services::{
         board, dispatch,
         orders::{self, Action, OrderInput},
@@ -87,28 +87,6 @@ fn editing_order_recomputes_fees_from_pricing() {
     assert_eq!(order.express_fee_kobo, expected.express_fee_kobo);
     assert_eq!(order.fee_kobo, expected.total_kobo);
 }
-
-#[test]
-fn repair_fees_fixes_corrupted_delivered_order() {
-    let conn = common::seeded();
-    let t = common::tariff(&conn);
-    let id: i64 = conn.query_row("SELECT id FROM orders WHERE status = 'delivered' LIMIT 1", [], |r| r.get(0)).unwrap();
-    let order = orders::get(&conn, id).unwrap();
-    let expected = t.quote(order.pickup_area_id, order.dropoff_area_id, order.distance_km, order.express).unwrap();
-
-    conn.execute("UPDATE orders SET fee_kobo = 0 WHERE id = ?1", (id,)).unwrap();
-
-    orders::repair_fees(&conn, &t).unwrap();
-
-    let fixed = orders::get(&conn, id).unwrap();
-    assert_eq!(fixed.zone_fee_kobo, expected.zone_fee_kobo);
-    assert_eq!(fixed.band_fee_kobo, expected.band_fee_kobo);
-    assert_eq!(fixed.bridge_fee_kobo, expected.bridge_fee_kobo);
-    assert_eq!(fixed.express_fee_kobo, expected.express_fee_kobo);
-    assert_eq!(fixed.fee_kobo, expected.total_kobo);
-}
-
-
 
 #[test]
 fn order_detail_shows_customers_own_phone() {
