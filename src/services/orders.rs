@@ -232,7 +232,7 @@ pub fn update(conn: &Connection, tariff: &Tariff, id: i64, input: &OrderInput, a
     Ok(())
 }
 
-pub fn repair_fees(conn: &Connection, tariff: &Tariff) -> AppResult<()> {
+pub fn repair_fees(conn: &Connection, tariff: &Tariff) -> AppResult<usize> {
     let mut stmt = conn.prepare(
         "SELECT id, pickup_area_id, dropoff_area_id, distance_km, express, zone_fee_kobo, band_fee_kobo, bridge_fee_kobo, express_fee_kobo, fee_kobo FROM orders"
     )?;
@@ -250,6 +250,7 @@ pub fn repair_fees(conn: &Connection, tariff: &Tariff) -> AppResult<()> {
             row.get::<_, i64>(9)?,
         ))
     })?;
+    let mut corrected = 0usize;
     for row in rows {
         let (id, pickup_area_id, dropoff_area_id, distance_km, express, zone_fee, band_fee, bridge_fee, express_fee, fee) = row?;
         let quote = tariff
@@ -265,9 +266,10 @@ pub fn repair_fees(conn: &Connection, tariff: &Tariff) -> AppResult<()> {
                 "UPDATE orders SET zone_fee_kobo = ?1, band_fee_kobo = ?2, bridge_fee_kobo = ?3, express_fee_kobo = ?4, fee_kobo = ?5 WHERE id = ?6",
                 params![quote.zone_fee_kobo, quote.band_fee_kobo, quote.bridge_fee_kobo, quote.express_fee_kobo, quote.total_kobo, id],
             )?;
+            corrected += 1;
         }
     }
-    Ok(())
+    Ok(corrected)
 }
 
 /// Moves an order along its lifecycle. Returns false when the order is not in a state

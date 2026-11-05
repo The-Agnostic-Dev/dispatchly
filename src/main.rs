@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use dispatchly::{config::Config, db, routes, seed, state::AppState};
+use dispatchly::{config::Config, db, routes, seed, services::{orders, pricing::Tariff}, state::AppState};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -17,6 +17,10 @@ async fn main() {
         seed::run(&conn).expect("could not seed demo data");
         tracing::info!("seeded demo data into {}", config.db_path);
     }
+
+    let tariff = Tariff::load(&conn).expect("could not load tariff");
+    let corrected = orders::repair_fees(&conn, &tariff).expect("could not repair order fees");
+    tracing::info!("corrected delivery fees on {} orders", corrected);
 
     let state = AppState::new(conn, &config);
     let app = routes::router(state, &config);
