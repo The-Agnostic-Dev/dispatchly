@@ -233,6 +233,12 @@ pub fn update(conn: &Connection, tariff: &Tariff, id: i64, input: &OrderInput, a
 }
 
 pub fn repair_fees(conn: &Connection, tariff: &Tariff) -> AppResult<usize> {
+    {
+        let mut meta_stmt = conn.prepare("SELECT value FROM meta WHERE key = 'fees_repaired'")?;
+        if meta_stmt.query([])?.next()?.is_some() {
+            return Ok(0);
+        }
+    }
     let mut stmt = conn.prepare(
         "SELECT id, pickup_area_id, dropoff_area_id, distance_km, express, zone_fee_kobo, band_fee_kobo, bridge_fee_kobo, express_fee_kobo, fee_kobo FROM orders"
     )?;
@@ -269,6 +275,7 @@ pub fn repair_fees(conn: &Connection, tariff: &Tariff) -> AppResult<usize> {
             corrected += 1;
         }
     }
+    conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('fees_repaired', '1')", [])?;
     Ok(corrected)
 }
 

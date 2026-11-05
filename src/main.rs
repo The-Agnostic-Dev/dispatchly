@@ -20,7 +20,9 @@ async fn main() {
 
     let tariff = Tariff::load(&conn).expect("could not load tariff");
     let corrected = orders::repair_fees(&conn, &tariff).expect("could not repair order fees");
-    tracing::info!("corrected delivery fees on {} orders", corrected);
+    if corrected > 0 {
+        tracing::info!("corrected delivery fees on {} orders", corrected);
+    }
 
     let state = AppState::new(conn, &config);
     let app = routes::router(state, &config);
