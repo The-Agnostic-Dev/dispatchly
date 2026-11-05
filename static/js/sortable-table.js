@@ -11,8 +11,17 @@ document.querySelectorAll('table[data-sortable]').forEach((table) => {
       const body = table.tBodies[0];
       const rows = [...body.rows];
       rows.sort((a, b) => {
-        const x = a.cells[index].textContent.trim();
-        const y = b.cells[index].textContent.trim();
+        const cellA = a.cells[index];
+        const cellB = b.cells[index];
+        const xAttr = cellA.dataset.value;
+        const yAttr = cellB.dataset.value;
+        if (xAttr !== undefined && yAttr !== undefined) {
+          const x = Number(xAttr);
+          const y = Number(yAttr);
+          return dir === 'asc' ? x - y : y - x;
+        }
+        const x = cellA.textContent.trim();
+        const y = cellB.textContent.trim();
         return dir === 'asc' ? x.localeCompare(y) : y.localeCompare(x);
       });
       rows.forEach((row) => body.appendChild(row));
