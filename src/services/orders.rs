@@ -202,7 +202,7 @@ pub fn reference_for(id: i64) -> String {
     format!("DL-{}", 24_000 + id)
 }
 
-pub fn update(conn: &Connection, id: i64, input: &OrderInput, actor: &str) -> AppResult<()> {
+pub fn update(conn: &Connection, tariff: &Tariff, id: i64, input: &OrderInput, actor: &str) -> AppResult<()> {
     let order = get(conn, id)?;
     if !order.is_editable() {
         return Err(AppError::BadRequest(format!(
@@ -211,18 +211,62 @@ pub fn update(conn: &Connection, id: i64, input: &OrderInput, actor: &str) -> Ap
             crate::views::status_label(order.status)
         )));
     }
+    let quote = tariff
+        .quote(input.pickup_area_id, input.dropoff_area_id, input.distance_km, input.express)
+        .map_err(|e| AppError::BadRequest(e.to_string()))?;
     conn.execute(
         "UPDATE orders SET merchant_name = ?1, merchant_phone = ?2, pickup_area_id = ?3, pickup_address = ?4,
             customer_name = ?5, customer_phone = ?6, dropoff_area_id = ?7, dropoff_address = ?8,
-            distance_km = ?9, express = ?10, cod_kobo = ?11, notes = ?12
-         WHERE id = ?13",
+            distance_km = ?9, express = ?10, cod_kobo = ?11, notes = ?12,
+            zone_fee_kobo = ?13, band_fee_kobo = ?14, bridge_fee_kobo = ?15, express_fee_kobo = ?16, fee_kobo = ?17
+         WHERE id = ?18",
         params![
             input.merchant_name, input.merchant_phone, input.pickup_area_id, input.pickup_address,
             input.customer_name, input.customer_phone, input.dropoff_area_id, input.dropoff_address,
-            input.distance_km, input.express, input.cod_kobo, input.notes, id
+            input.distance_km, input.express, input.cod_kobo, input.notes,
+            quote.zone_fee_kobo, quote.band_fee_kobo, quote.bridge_fee_kobo, quote.express_fee_kobo, quote.total_kobo,
+            id
         ],
     )?;
     log_event(conn, id, &order.status, "Order details edited", actor)?;
+    Ok(())
+}
+
+pub fn repair_fees(conn: &Connection, tariff: &Tariff) -> AppResult<()> {
+    let mut stmt = conn.prepare(
+        "SELECT id, pickup_area_id, dropoff_area_id, distance_km, express, zone_fee_kobo, band_fee_kobo, bridge_fee_kobo, express_fee_kobo, fee_kobo FROM orders"
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, i64>(0)?,
+            row.get::<_, i64>(1)?,
+            row.get::<_, i64>(2)?,
+            row.get::<_, f64>(3)?,
+            row.get::<_, bool>(4)?,
+            row.get::<_, i64>(5)?,
+            row.get::<_, i64>(6)?,
+            row.get::<_, i64>(7)?,
+            row.get::<_, i64>(8)?,
+            row.get::<_, i64>(9)?,
+        ))
+    })?;
+    for row in rows {
+        let (id, pickup_area_id, dropoff_area_id, distance_km, express, zone_fee, band_fee, bridge_fee, express_fee, fee) = row?;
+        let quote = tariff
+            .quote(pickup_area_id, dropoff_area_id, distance_km, express)
+            .map_err(|e| AppError::BadRequest(e.to_string()))?;
+        if zone_fee != quote.zone_fee_kobo
+            || band_fee != quote.band_fee_kobo
+            || bridge_fee != quote.bridge_fee_kobo
+            || express_fee != quote.express_fee_kobo
+            || fee != quote.total_kobo
+        {
+            conn.execute(
+                "UPDATE orders SET zone_fee_kobo = ?1, band_fee_kobo = ?2, bridge_fee_kobo = ?3, express_fee_kobo = ?4, fee_kobo = ?5 WHERE id = ?6",
+                params![quote.zone_fee_kobo, quote.band_fee_kobo, quote.bridge_fee_kobo, quote.express_fee_kobo, quote.total_kobo, id],
+            )?;
+        }
+    }
     Ok(())
 }
 
