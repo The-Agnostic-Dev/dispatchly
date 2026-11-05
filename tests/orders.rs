@@ -140,8 +140,8 @@ fn riders_page_lists_fleet_by_cash_descending() {
         assert!(pair[0].cash_on_hand_kobo >= pair[1].cash_on_hand_kobo, "riders must be sorted by cash descending");
     }
     let emeka = common::rider_id(&conn, "Emeka Obi");
-    assert_eq!(fleet[0].id, emeka);
-    assert_eq!(fleet[0].name, "Emeka Obi");
+    assert_eq!(fleet[0].rider.id, emeka);
+    assert_eq!(fleet[0].rider.name, "Emeka Obi");
     let max_cash = fleet.iter().map(|r| r.cash_on_hand_kobo).max().unwrap();
     assert_eq!(fleet[0].cash_on_hand_kobo, max_cash);
 }
