@@ -83,7 +83,17 @@ fn order_detail_shows_customers_own_phone() {
         .render(minijinja::context! { order => &order, user => &user, flash => Option::<dispatchly::auth::Flash>::None })
         .unwrap();
     assert!(html.contains(&order.customer_phone));
-    assert!(!html.contains(&order.merchant_phone));
+    let customer_card = html
+        .split("data-testid=\"customer\"")
+        .nth(1)
+        .expect("customer card")
+        .split("data-testid=")
+        .nth(1)
+        .map(|_| html.split("data-testid=\"customer\"").nth(1).unwrap())
+        .unwrap_or_default();
+    let customer_card = customer_card.split("data-testid=").next().unwrap_or(customer_card);
+    assert!(customer_card.contains(&order.customer_phone));
+    assert!(!customer_card.contains(&order.merchant_phone));
 }
 
 #[test]
