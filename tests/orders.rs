@@ -91,6 +91,7 @@ fn editing_order_recomputes_fees_from_pricing() {
 #[test]
 fn repair_fees_fixes_corrupted_delivered_order() {
     let conn = common::seeded();
+    conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)", []).unwrap();
     let t = common::tariff(&conn);
     let id: i64 = conn.query_row("SELECT id FROM orders WHERE status = 'delivered' LIMIT 1", [], |r| r.get(0)).unwrap();
     let order = orders::get(&conn, id).unwrap();
@@ -111,6 +112,7 @@ fn repair_fees_fixes_corrupted_delivered_order() {
 #[test]
 fn repair_fees_is_one_off_after_tariff_change() {
     let conn = common::seeded();
+    conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)", []).unwrap();
     let t = common::tariff(&conn);
     let id: i64 = conn.query_row("SELECT id FROM orders WHERE status = 'delivered' LIMIT 1", [], |r| r.get(0)).unwrap();
     let order = orders::get(&conn, id).unwrap();
