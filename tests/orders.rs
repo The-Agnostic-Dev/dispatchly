@@ -91,7 +91,6 @@ fn editing_order_recomputes_fees_from_pricing() {
 #[test]
 fn repair_fees_fixes_corrupted_delivered_order() {
     let conn = common::seeded();
-    conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)", []).unwrap();
     let t = common::tariff(&conn);
     let id: i64 = conn.query_row("SELECT id FROM orders WHERE status = 'delivered' LIMIT 1", [], |r| r.get(0)).unwrap();
     let order = orders::get(&conn, id).unwrap();
@@ -112,7 +111,6 @@ fn repair_fees_fixes_corrupted_delivered_order() {
 #[test]
 fn repair_fees_is_one_off_after_tariff_change() {
     let conn = common::seeded();
-    conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)", []).unwrap();
     let t = common::tariff(&conn);
     let id: i64 = conn.query_row("SELECT id FROM orders WHERE status = 'delivered' LIMIT 1", [], |r| r.get(0)).unwrap();
     let order = orders::get(&conn, id).unwrap();
@@ -137,6 +135,19 @@ fn repair_fees_is_one_off_after_tariff_change() {
     let unchanged = orders::get(&conn, id).unwrap();
     assert_eq!(unchanged.zone_fee_kobo, expected.zone_fee_kobo);
     assert_eq!(unchanged.fee_kobo, expected.total_kobo);
+}
+
+#[test]
+fn repair_fees_works_without_manual_meta_creation() {
+    let conn = common::seeded();
+    let t = common::tariff(&conn);
+    let id: i64 = conn.query_row("SELECT id FROM orders WHERE status = 'delivered' LIMIT 1", [], |r| r.get(0)).unwrap();
+    let order = orders::get(&conn, id).unwrap();
+    let expected = t.quote(order.pickup_area_id, order.dropoff_area_id, order.distance_km, order.express).unwrap();
+    conn.execute("UPDATE orders SET fee_kobo = 0 WHERE id = ?1", (id,)).unwrap();
+    orders::repair_fees(&conn, &t).unwrap();
+    let fixed = orders::get(&conn, id).unwrap();
+    assert_eq!(fixed.fee_kobo, expected.total_kobo);
 }
 
 #[test]
