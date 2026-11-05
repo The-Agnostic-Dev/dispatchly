@@ -70,7 +70,7 @@ pub fn list(conn: &Connection, today: NaiveDate) -> rusqlite::Result<Vec<RiderSu
         .query_map([], |r| r.get(0))?
         .collect::<Result<_, _>>()?;
     let (start, end) = clock::day_bounds(today);
-    let mut summaries: Vec<RiderSummary> = riders
+    riders
         .into_iter()
         .map(|id| {
             let rider = get(conn, id)?;
@@ -87,7 +87,11 @@ pub fn list(conn: &Connection, today: NaiveDate) -> rusqlite::Result<Vec<RiderSu
                 rider,
             })
         })
-        .collect::<rusqlite::Result<Vec<_>>>()?;
+        .collect()
+}
+
+pub fn list_by_cash(conn: &Connection, today: NaiveDate) -> rusqlite::Result<Vec<RiderSummary>> {
+    let mut summaries = list(conn, today)?;
     summaries.sort_by_key(|r| std::cmp::Reverse(r.cash_on_hand_kobo));
     Ok(summaries)
 }

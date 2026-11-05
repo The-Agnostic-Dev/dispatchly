@@ -152,7 +152,7 @@ fn remittance_sheet_tracks_what_was_handed_in() {
 #[test]
 fn riders_list_is_sorted_by_cash_on_hand_desc() {
     let conn = common::seeded();
-    let riders = riders::list(&conn, clock::today()).unwrap();
+    let riders = riders::list_by_cash(&conn, clock::today()).unwrap();
     assert!(!riders.is_empty());
     let mut prev = i64::MAX;
     for r in &riders {
@@ -160,4 +160,9 @@ fn riders_list_is_sorted_by_cash_on_hand_desc() {
         prev = r.cash_on_hand_kobo;
     }
     assert_eq!(riders[0].rider.name, "Emeka Obi");
+
+    // list() remains alphabetical for the assign-rider dropdown.
+    let alphabetical = riders::list(&conn, clock::today()).unwrap();
+    assert!(!alphabetical.is_empty());
+    assert_eq!(alphabetical[0].rider.name, "Chidi Okeke");
 }
